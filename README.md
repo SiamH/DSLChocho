@@ -1,6 +1,6 @@
 # DSLChocho
 
-This is a domain speciifc langauge that solves N-queens problem. The tools used are: Xtend, Xpand, Chcoco library. Just import the project in Eclipe Luna(for code generation part, it works well with Luna) and run the program. You will be able to use the simple syntax to do constraint solving.  One simple program looks like this:
+This is a domain speciifc langauge that solves N-queens problem. The tools used are: Xtend, Xpand, Chcoco library. Just import the project in Eclipe Luna(for code generation part, it works well with Luna) and run the program. You will be able to use the simple syntax to do constraint solving. You have to add the jar file to have the Chocho libraries in Eclipse. This will generate java code for the solution. One simple program looks like this:
 
 
 
