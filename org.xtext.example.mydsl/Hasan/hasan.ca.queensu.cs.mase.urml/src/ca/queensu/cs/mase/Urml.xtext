@@ -1,0 +1,370 @@
+grammar ca.queensu.cs.mase.Urml with org.eclipse.xtext.common.Terminals
+
+import "http://www.eclipse.org/emf/2002/Ecore" as ecore
+generate urml "http://www.queensu.ca/cs/mase/Urml"
+
+Model
+	: 	'model' name=ID "{" 
+		(
+		capsules+=Capsule 
+	| 	protocols+=Protocol 
+		)* '}'
+	;
+
+
+/******************************************************************
+ * Data and Variables
+ ******************************************************************/
+
+
+LocalVar
+	: 	(isBool?='bool'|isInt?='int') 
+		name=ID 
+	;
+
+
+Attribute
+	:	'attribute' 
+		(isBool?='bool'|isInt?='int')
+		name=ID 
+		(':=' defaultValue=Expression)?
+	;
+
+/****************************************************************
+ * Protocol
+ ****************************************************************/
+
+Protocol
+	:	'protocol' name=ID '{'
+		(('incoming' '{' incomingMessages+=Signal* '}')|
+		('outgoing' '{' outgoingMessages+=Signal* '}'))*
+		'}'
+	;
+
+Signal
+	:	name=ID 
+		'(' (LocalVars+=LocalVar (',' LocalVars+=LocalVar)*)? ')'
+	;
+
+/****************************************************************
+ * Capsules, Ports, and Connectors
+ ****************************************************************/
+
+/**
+ * The capsule 
+ */
+Capsule
+	:	(root?='root')? 'capsule' name=ID '{'
+		(
+			'external' interfacePorts+=Port 
+		| 	internalPorts+=Port 
+		| 	timerPorts+=TimerPort 
+		| 	logPorts+=LogPort 
+		| 	attributes+=Attribute 
+		| 	capsuleInsts+=CapsuleInst 
+		| 	connectors+=Connector 
+		| 	operations+=Operation 
+		| 	statemachines+=StateMachine
+		)*
+		'}'
+	;
+
+Operation
+	:	'operation' 
+		(isBool?='bool'|isInt?='int'|isVoid?='void')
+		name=ID 
+		'(' (LocalVars+=LocalVar (',' LocalVars+=LocalVar)*)? ')' 
+		'{'
+			operationCode=OperationCode
+		'}'
+	;
+TimerPort:
+	'timerPort' name=ID;
+LogPort:
+	'logPort' name=ID;
+Port:
+    'port' (conjugated?='~')? name=ID ':' protocol=[Protocol];
+Connector:
+	'connector' (capsuleInst1=[CapsuleInst] '.')? port1=[Port]
+	'and' (capsuleInst2=[CapsuleInst] '.')? port2=[Port];
+CapsuleInst:
+	'capsuleInstance' name=ID ':' type=[Capsule];
+
+/*******************************************************************
+ * State Machines
+ *******************************************************************/
+
+StateMachine:
+	{StateMachine}
+	'stateMachine' '{'
+		(
+			states+=State_ 
+			| transitions+=Transition 
+		)*
+	'}';
+	
+State_: 
+	(final?='final')? 'state' name=ID  ('{'
+		('entry' '{' entryCode=ActionCode '}')?
+		('exit' '{' exitCode=ActionCode '}')?
+		('sub' substatemachine=StateMachine)?
+	'}')?;
+
+
+/*
+ * transitions:
+ */
+
+Transition
+	:	'transition' (name=ID)? ':' 
+		(init?='initial' | from=[State_]) '->' to=[State_]
+		'{'
+			('guard' '{' guard=Expression '}')?
+			('triggeredBy' ((triggers+=Trigger_in  ('or' triggers+=Trigger_in)*) 
+				| 'timeout' timerPort=[TimerPort] | universal?='*'
+			))?
+			('action' '{' action=ActionCode '}')? 
+		'}'
+	;
+
+
+/*
+ * other constructs for state machines:
+ */
+
+Trigger_in:
+	from=[Port] '.' 
+	signal=[Signal]
+	'(' (parameters+=IncomingVariable (',' 
+		parameters+=IncomingVariable
+	)*)? ')';
+
+IncomingVariable
+	:	(isBool?='bool'|isInt?='int') 
+		name=ID
+	;
+
+Trigger_out:
+	to=[Port] '.' 
+	signal=[Signal|ID] 
+	'(' 
+		(parameters+=Expression (',' 
+			parameters+=Expression
+		)*)? 
+	')'
+	;
+
+/*********************************************************************
+ * Operation and Action Code / Statements
+ *********************************************************************/
+
+
+// operation code
+
+OperationCode
+	: 	statements+=StatementOperation+
+	;
+StatementOperation 
+	: 	NoOp
+	|	Variable
+	| 	Invoke
+	| 	Assignment
+	|   SendTrigger
+	|   InformTimer
+	| 	WhileLoopOperation
+	| 	IfStatementOperation
+	| 	LogStatement
+	|   ChooseStatement
+	| 	ReturnStatement
+	;
+WhileLoopOperation
+	: 	'while' condition=Expression '{' statements+=StatementOperation+ '}'
+	;	
+IfStatementOperation 
+	: 	'if' condition=Expression '{' thenStatements+=StatementOperation+ '}'
+		('else '  '{' elseStatements+=StatementOperation+ '}')?    
+	;
+ReturnStatement 
+	: 	{ReturnStatement} 'return' returnValue=Expression?
+	;
+
+
+// action code
+
+ActionCode
+	: 	statements+=Statement+
+	;
+Statement
+	: 	SendTrigger 
+	|	Variable	
+	| 	InformTimer 
+	| 	NoOp 
+	| 	Invoke 
+	| 	Assignment 
+	| 	WhileLoop 
+	| 	IfStatement 
+	| 	LogStatement
+	|   ChooseStatement
+	;
+Variable 
+	:	'var' 
+		
+		var=LocalVar 
+		(assign?=':=' exp=Expression)?
+	;
+SendTrigger 
+	:	'send' triggers+=Trigger_out  ('and' triggers+=Trigger_out)*
+	;
+InformTimer 
+	:	'inform' timerPort=[TimerPort|ID] 'in' time=AdditiveExpression 
+	;
+NoOp 
+	:	{NoOp} 'noop'
+	;
+Invoke 
+	:	'call' operation=[Operation|ID]
+		'(' 
+			(parameters+=Expression (',' parameters+=Expression)*)?
+		')'
+	;
+Assignment 
+	:	lvalue=[Assignable|ID] ':=' exp=Expression
+	;	
+	
+Assignable 
+	:	LocalVar 
+	|	Attribute
+	;
+
+WhileLoop 
+	:	'while' condition=Expression '{' statements+=Statement+ '}'
+	;	
+IfStatement 
+	:	'if' condition=Expression '{' thenStatements+=Statement+ '}'
+		('else '  '{' elseStatements+=Statement+ '}')?  
+	;
+LogStatement 
+	:	'log' logPort=[LogPort] 'with' left=StringExpression
+	;
+
+ChooseStatement 
+	:	{ChooseStatement}'choose' 
+		'('
+			var =[LocalVar] ',' expression = AdditiveExpression
+		')'
+	;
+
+StringExpression
+	: 	IndividualExpression => ({ConcatenateExpression.left=current} '^'
+		rest=IndividualExpression)*
+;
+
+IndividualExpression returns StringExpression
+	:	expr=Expression | str=STRING;
+
+/*********************************************************************
+ * Expressions
+ *********************************************************************/
+
+Expression
+	:	ConditionalOrExpression
+	;
+
+ConditionalOrExpression  returns Expression
+    :   ConditionalAndExpression =>
+    		({ConditionalOrExpression.left=current} '||' 
+    		rest=ConditionalAndExpression)*
+    ;
+
+ConditionalAndExpression returns Expression
+    :   RelationalOpExpression =>
+    		({ConditionalAndExpression.left=current} '&&' 
+    		rest=RelationalOpExpression)*
+    ;
+
+RelationalOpExpression returns Expression
+	:	AdditiveExpression  (=>
+		  (  {LessThanOrEqual.left=current}    "<=" 
+	      |  {LessThan.left=current}           "<"
+          |  {GreaterThanOrEqual.left=current} ">=" 
+	      |  {GreaterThan.left=current}        ">" 
+	      |  {Equal.left=current}              "==" 
+	      |  {NotEqual.left=current}           "!="
+		  ) 
+		rest=AdditiveExpression)*
+	;
+	
+AdditiveExpression returns Expression
+    :   MultiplicativeExpression (=>({Plus.left=current}  '+' 
+    	                         |  {Minus.left=current}  '-'
+    	                         ) 
+    	rest=MultiplicativeExpression )*
+    ;
+
+MultiplicativeExpression returns Expression
+    :   UnaryExpression (=>({Multiply.left=current} '*'
+    	               |  {Divide.left=current}     '/' 
+    	               |  {Modulo.left=current}     '%'
+                        ) 
+        rest=UnaryExpression )*
+    ;
+    
+UnaryExpression  returns Expression
+    :   UnaryExpressionNotPlusMinus
+    |  ({UnaryExpression} '-' exp=UnaryExpression)
+    ;
+
+UnaryExpressionNotPlusMinus returns Expression
+    :   NotBooleanExpression
+    |	PrimaryExpression
+    ;
+
+NotBooleanExpression 
+	:	'!' exp=UnaryExpression
+	;
+
+PrimaryExpression returns Expression
+	:	LiteralOrIdentifier
+	|	'(' Expression ')'
+	;
+
+LiteralOrIdentifier returns Expression
+	:	Literal
+	|	Identifier
+	;
+
+Literal 
+	:	IntLiteral
+	|	BoolLiteral 
+	|	FunctionCall
+	;
+
+IntLiteral 
+	: 	{IntLiteral} int=INT
+	;
+
+Identifier 
+	:	id=[Identifiable]
+	;
+
+Identifiable
+	:	Assignable 
+	|	IncomingVariable
+	;
+
+FunctionCall
+	: 	{FunctionCall} call=[Operation|ID]
+		'(' 
+			(params+=Expression ( ',' params+=Expression)*)? 
+		')'
+	;
+
+BoolLiteral
+	:	{BoolLiteral} true=BOOLEAN
+	;
+
+terminal BOOLEAN returns ecore::EBoolean
+	:	'true'
+	|	'false'
+	;
+

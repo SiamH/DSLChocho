@@ -1,0 +1,236 @@
+model PragProg {
+	root capsule PragProg {
+		capsuleInstance ref : Referee
+		capsuleInstance player1 : Player
+		capsuleInstance player2 : Player
+		connector ref.refToPlayer1 and player1.refFromPlayer
+		connector ref.refToPlayer2 and player2.refFromPlayer
+	}
+	
+	capsule Referee {
+		logPort logger
+		attribute int iplayer1Response := 5
+		attribute int iplayer2Response := 5
+		
+		attribute int iWinPlayer1 := 0
+		attribute int iWinPlayer2 := 0
+		
+		attribute int iNumOfRounds := 1
+		
+		attribute int iFinished := 0
+		
+		attribute int iNumOfResponse := 0
+		
+		external port refToPlayer1 : RefereeAndPlayerCom
+		external port refToPlayer2 : RefereeAndPlayerCom
+		
+		
+		stateMachine 
+		{
+			state Initiate
+			state Wait
+			state Receive
+			state Decision
+			final state Finish
+			
+			transition init : initial -> Initiate 
+			{
+			}
+			
+			transition SignalAhead : Initiate -> Wait 
+			{
+				action {
+				send refToPlayer1.Run()
+				log logger with "Referee signals Player 1 Round-" ^ iNumOfRounds
+				send refToPlayer2.Run()
+				log logger with "Referee signals to Player 2 Round-" ^ iNumOfRounds
+				}
+			}
+			
+			transition receiveOneFromPlayer1 : Wait -> Wait 
+			{
+				guard{iNumOfResponse == 0}
+				
+				triggeredBy refToPlayer1.Response(int iRes)
+				action {
+				iplayer1Response := iRes
+				iNumOfResponse := iNumOfResponse + 1
+				log logger with "Player 1 sends response first Round-" ^ iNumOfRounds
+				}
+			}
+			
+			transition receiveOneFromPlayer2 : Wait -> Wait 
+			{
+				guard{iNumOfResponse == 0}
+				
+				triggeredBy refToPlayer2.Response(int iRes)
+				action {
+				iplayer2Response := iRes
+				iNumOfResponse := iNumOfResponse + 1
+				log logger with "Player 2 sends response first Round-" ^ iNumOfRounds
+				}
+			}
+			
+			transition receiveSecFromPlayer1 : Wait -> Receive 
+			{
+				guard{iNumOfResponse == 1}
+				
+				triggeredBy refToPlayer1.Response(int iRes)
+				action {
+				iplayer1Response := iRes
+				log logger with "Player 1 sends response second Round-" ^ iNumOfRounds
+				}
+			}
+			
+			transition receiveSecFromPlayer2 : Wait -> Receive 
+			{
+				guard{iNumOfResponse == 1}
+				
+				triggeredBy refToPlayer2.Response(int iRes)
+				action {
+				iplayer2Response := iRes
+				log logger with "Player 1 sends response second Round-" ^ iNumOfRounds
+				}
+			}
+			
+			transition decideWinner : Receive -> Decision {
+				action {
+					
+				if(iplayer2Response==iplayer1Response){
+					log logger with "Player 1 and 2 ties Round-" ^ iNumOfRounds
+				}
+				if(iplayer2Response!=iplayer1Response)
+				{
+					var int iWin :=0
+					if (iplayer1Response == 1)
+					{
+						if (iplayer2Response == 0){
+							iWin := 1
+						}
+						if (iplayer2Response == 2){
+							iWin := 2
+						}
+					}
+					if (iplayer1Response == 2)
+					{
+						if (iplayer2Response == 1){
+							iWin := 1
+						}
+						if (iplayer2Response == 0){
+							iWin := 2
+						}
+					}
+					
+					if (iplayer1Response == 0)
+					{
+						if (iplayer2Response == 2){
+							iWin := 1
+						}
+						if (iplayer2Response == 1){
+							iWin := 2
+						}
+					}
+					if(iWin == 1)
+					{
+						log logger with "Player1 gets round-" ^ iNumOfRounds
+						iWinPlayer1 := iWinPlayer1 + 1
+					}
+					if(iWin == 1)
+					{
+						log logger with "Player1 gets Round-" ^ iNumOfRounds
+						iWinPlayer2 := iWinPlayer2 + 1
+					}		
+				}
+				
+				if(iNumOfRounds == 3 || iWinPlayer1 == 2 || iWinPlayer2 == 2)
+				{
+					if(iWinPlayer1 > iWinPlayer2)
+					{
+						log logger with "Player 1 wins"
+					}
+					if(iWinPlayer2 > iWinPlayer1)
+					{
+						log logger with "Player 2 wins"
+					}
+					if(iWinPlayer1 == iWinPlayer2)
+					{
+						log logger with "It's a Tie"
+					}
+					
+					iFinished := 1
+					send refToPlayer1.Finish()
+					send refToPlayer2.Finish()
+				}
+				
+				if(iFinished==0)
+				{
+					iNumOfRounds := iNumOfRounds + 1
+					iNumOfResponse := 0
+					iplayer1Response := 5
+					iplayer2Response := 5
+				}
+			  }
+			}
+			
+			transition StartAgain : Decision -> Initiate {
+				guard {iFinished==0}
+				}
+				
+			transition TouchLine : Decision -> Finish {
+				guard {iFinished==1}
+				action {
+				log logger with "Referee leaves"
+				}
+			}
+		}
+}
+
+
+	capsule Player {
+		external port ~refFromPlayer : RefereeAndPlayerCom
+		logPort logger
+		attribute int iNumOfRounds := 1
+	
+		stateMachine {
+			state ready
+			state Signaled
+			state Responsed
+			final state Finish
+			
+			transition init : initial -> ready {
+			}
+			
+			transition Play : ready -> ready {
+				triggeredBy refFromPlayer.Run() 
+				action {
+				log logger with "Referee signals"
+				var int choice :=0
+				choose(choice, 3)
+				send refFromPlayer.Response(choice)
+				log logger with "Player sends " ^ choice ^ " : Round-" ^ iNumOfRounds
+				iNumOfRounds := iNumOfRounds+1
+				}
+			}
+			
+			transition TouchLine : ready -> Finish {
+				triggeredBy refFromPlayer.Finish()
+				action {
+				log logger with "Player leaves"
+				}
+			}
+		}
+	}
+	
+	
+	protocol RefereeAndPlayerCom {
+		outgoing {
+			Run()
+			Finish()
+		}
+		incoming {
+			Response(int responseValue)
+		}
+	}
+	
+}
+

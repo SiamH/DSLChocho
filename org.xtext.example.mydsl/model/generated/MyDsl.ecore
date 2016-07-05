@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ecore:EPackage xmi:version="2.0" xmlns:xmi="http://www.omg.org/XMI" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xmlns:ecore="http://www.eclipse.org/emf/2002/Ecore" name="myDsl" nsURI="http://www.xtext.org/example/mydsl/MyDsl" nsPrefix="myDsl">
+  <eClassifiers xsi:type="ecore:EClass" name="Model">
+    <eStructuralFeatures xsi:type="ecore:EReference" name="elements" upperBound="-1"
+        eType="#//Types" containment="true"/>
+  </eClassifiers>
+  <eClassifiers xsi:type="ecore:EClass" name="Types"/>
+  <eClassifiers xsi:type="ecore:EClass" name="Variable" eSuperTypes="#//Types">
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="name" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="range" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EInt"/>
+  </eClassifiers>
+  <eClassifiers xsi:type="ecore:EClass" name="Equal" eSuperTypes="#//Types">
+    <eStructuralFeatures xsi:type="ecore:EReference" name="var1" eType="#//Variable"/>
+    <eStructuralFeatures xsi:type="ecore:EReference" name="var2" eType="#//Variable"/>
+  </eClassifiers>
+  <eClassifiers xsi:type="ecore:EClass" name="EqualPlus" eSuperTypes="#//Types">
+    <eStructuralFeatures xsi:type="ecore:EReference" name="var1" eType="#//Variable"/>
+    <eStructuralFeatures xsi:type="ecore:EReference" name="var2" eType="#//Variable"/>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="range" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EInt"/>
+  </eClassifiers>
+  <eClassifiers xsi:type="ecore:EClass" name="EqualMinus" eSuperTypes="#//Types">
+    <eStructuralFeatures xsi:type="ecore:EReference" name="var1" eType="#//Variable"/>
+    <eStructuralFeatures xsi:type="ecore:EReference" name="var2" eType="#//Variable"/>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="range" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EInt"/>
+  </eClassifiers>
+  <eClassifiers xsi:type="ecore:EClass" name="NotEqual" eSuperTypes="#//Types">
+    <eStructuralFeatures xsi:type="ecore:EReference" name="var1" eType="#//Variable"/>
+    <eStructuralFeatures xsi:type="ecore:EReference" name="var2" eType="#//Variable"/>
+  </eClassifiers>
+  <eClassifiers xsi:type="ecore:EClass" name="NotEqualPlus" eSuperTypes="#//Types">
+    <eStructuralFeatures xsi:type="ecore:EReference" name="var1" eType="#//Variable"/>
+    <eStructuralFeatures xsi:type="ecore:EReference" name="var2" eType="#//Variable"/>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="range" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EInt"/>
+  </eClassifiers>
+  <eClassifiers xsi:type="ecore:EClass" name="NotEqualMinus" eSuperTypes="#//Types">
+    <eStructuralFeatures xsi:type="ecore:EReference" name="var1" eType="#//Variable"/>
+    <eStructuralFeatures xsi:type="ecore:EReference" name="var2" eType="#//Variable"/>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="range" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EInt"/>
+  </eClassifiers>
+  <eClassifiers xsi:type="ecore:EClass" name="ShowAll" eSuperTypes="#//Types">
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="range" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EBoolean"/>
+  </eClassifiers>
+  <eClassifiers xsi:type="ecore:EClass" name="Log" eSuperTypes="#//Types">
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="str" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
+  </eClassifiers>
+  <eClassifiers xsi:type="ecore:EClass" name="Solve" eSuperTypes="#//Types">
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="range" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EBoolean"/>
+  </eClassifiers>
+</ecore:EPackage>
